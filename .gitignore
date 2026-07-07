@@ -1,0 +1,9 @@
+# 原始文档 PDF(不纳入版本控制)
+*.pdf
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 临时提取文本
+*.txt
