@@ -299,6 +299,17 @@ CREATE TABLE gold_jd_entities (
 );
 CREATE INDEX idx_gold_jde_jd ON gold_jd_entities(jd_id);
 
+-- JD 字段金标:岗位标题、城市、方向等非实体字段
+CREATE TABLE gold_jd_fields (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    jd_id           UUID NOT NULL REFERENCES job_postings(jd_id),
+    field_name      TEXT NOT NULL,               -- job_title / city / target_group / ...
+    canonical_value TEXT NOT NULL,
+    annotator       TEXT,
+    version         TEXT NOT NULL DEFAULT 'v1'
+);
+CREATE INDEX idx_gold_jdf_jd ON gold_jd_fields(jd_id);
+
 -- JD 关系金标
 CREATE TABLE gold_jd_relations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),

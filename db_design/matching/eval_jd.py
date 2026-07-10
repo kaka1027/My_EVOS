@@ -6,7 +6,7 @@
 - 关系(REQUIRES):按 (source_canonical, target_canonical) 对对齐,算 F1
 
 数据来源:
-- 金标:gold_jd_entities + gold_jd_relations
+- 金标:gold_jd_entities + gold_jd_fields + gold_jd_relations
 - 系统:relations(REQUIRES) + entities + job_postings(字段)
 """
 from __future__ import annotations
@@ -91,12 +91,7 @@ def score_jd(sys_skills: set[str],
 # 与 PostgreSQL 集成:从金标表 + 系统表取数
 # ============================================================
 def load_jd_gold_from_db(cur, jd_id: str) -> tuple[set[str], set[tuple], dict[str, str]]:
-    """从 gold_jd_entities / gold_jd_relations / gold_jd_fields 取金标。
-
-    注意:job_postings 的字段金标可能单独存一张表 gold_jd_fields,或者直接在 gold_jd_entities 里用 entity_type 标记。
-    这里假设字段金标在 gold_jd_entities 里,entity_type != 'SKILL' 的是字段(job_title/city 等)。
-    如果设计不同,可单独加表。
-    """
+    """从 gold_jd_entities / gold_jd_relations / gold_jd_fields 取金标。"""
     # 技能
     cur.execute("""
         SELECT canonical_name FROM gold_jd_entities
@@ -111,14 +106,12 @@ def load_jd_gold_from_db(cur, jd_id: str) -> tuple[set[str], set[tuple], dict[st
     """, (jd_id,))
     rels = {(row[0], row[1]) for row in cur.fetchall()}
 
-    # 字段(假设 entity_type='JOB' 且 field_name 记录了字段名)
-    # 若无单独 field_name 列,可改从 gold_jd_entities.canonical_name 取,并手工映射字段名
-    # 这里简化:直接用 canonical_name 作 value,entity_type 作 field_name
+    # 字段:岗位标题、城市、目标方向等非实体字段
     cur.execute("""
-        SELECT entity_type::text, canonical_name FROM gold_jd_entities
-        WHERE jd_id = %s AND entity_type != 'SKILL'
+        SELECT field_name, canonical_value FROM gold_jd_fields
+        WHERE jd_id = %s
     """, (jd_id,))
-    fields = {row[0].lower(): row[1] for row in cur.fetchall()}
+    fields = {row[0]: row[1] for row in cur.fetchall()}
 
     return skills, rels, fields
 

@@ -22,24 +22,8 @@ def main():
     gold_skills, gold_rels, gold_fields = load_jd_gold_from_db(cur, jd_id)
     sys_skills, sys_rels, sys_fields = load_jd_system_from_db(cur, jd_id)
 
-    # 注意:金标的字段用的是 entity_type(JOB/LOCATION/CATEGORY),系统用的是 job_title/city/target_group
-    # 需要做个映射。这里简化:直接手工对齐金标与系统的字段名
-    # 金标 fields: {'job': 'AI Agent 开发工程师', 'location': '上海', 'category': 'AI_AGENT'}
-    # 系统 fields: {'job_title': '...', 'city': '...', 'target_group': 'AI_AGENT'}
-    # 映射后统一字段名
-    gold_fields_mapped = {}
-    sys_fields_mapped = {}
-    for entity_type, val in gold_fields.items():
-        if entity_type == 'job':
-            gold_fields_mapped['job_title'] = val
-        elif entity_type == 'location':
-            gold_fields_mapped['city'] = val
-        elif entity_type == 'category':
-            gold_fields_mapped['target_group'] = val
-    sys_fields_mapped = sys_fields  # 系统字段已经是标准名
-
-    result_jd = score_jd(sys_skills, sys_rels, sys_fields_mapped,
-                         gold_skills, gold_rels, gold_fields_mapped)
+    result_jd = score_jd(sys_skills, sys_rels, sys_fields,
+                         gold_skills, gold_rels, gold_fields)
 
     print("=" * 60)
     print("JD 解析评测 (AI Agent JD)")
@@ -56,8 +40,8 @@ def main():
     print(f"系统技能({len(sys_skills)}): {sys_skills}")
     print(f"金标关系({len(gold_rels)}): {gold_rels}")
     print(f"系统关系({len(sys_rels)}): {sys_rels}")
-    print(f"金标字段: {gold_fields_mapped}")
-    print(f"系统字段: {sys_fields_mapped}")
+    print(f"金标字段: {gold_fields}")
+    print(f"系统字段: {sys_fields}")
 
     # ========== 简历评测 ==========
     cur.execute("SELECT id FROM resumes WHERE anon_name='候选人A'")

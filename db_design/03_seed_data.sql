@@ -251,14 +251,14 @@ CROSS JOIN (VALUES
 WHERE jp.target_group='AI_AGENT';
 
 -- JD 字段金标(job_title / city / target_group)
-INSERT INTO gold_jd_entities (jd_id, canonical_name, entity_type, annotator)
-SELECT jp.jd_id, v.cn, v.et::entity_type, 'KAKA'
+INSERT INTO gold_jd_fields (jd_id, field_name, canonical_value, annotator)
+SELECT jp.jd_id, v.field_name, v.value, 'KAKA'
 FROM job_postings jp
 CROSS JOIN (VALUES
-  ('AI Agent 开发工程师', 'JOB'),
-  ('上海', 'LOCATION'),
-  ('AI_AGENT', 'CATEGORY')
-) AS v(cn, et)
+  ('job_title', 'AI Agent 开发工程师'),
+  ('city', '上海'),
+  ('target_group', 'AI_AGENT')
+) AS v(field_name, value)
 WHERE jp.target_group='AI_AGENT' LIMIT 1;
 
 -- JD 关系金标(REQUIRES)

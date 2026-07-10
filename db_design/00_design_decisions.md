@@ -127,7 +127,7 @@
 
 **已知问题**:
 - 金标只标了必备技能,未标加分技能 → 系统抽出加分技能算 FP,压低 F1。完整评测需在金标中标注全部技能(含加分),或评测前过滤掉系统的加分技能。
-- JD 字段金标使用 entity_type(JOB/LOCATION/CATEGORY),与系统字段名(job_title/city/target_group)不一致,需手工映射。可在 schema 中统一或在评测时做映射字典。
+- JD 字段金标已拆到 `gold_jd_fields(field_name, canonical_value)`,不再复用 `gold_jd_entities.entity_type`,避免 LOCATION/CATEGORY 与实体枚举冲突。
 
 ---
 
