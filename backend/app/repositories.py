@@ -6,6 +6,41 @@ from db_design.matching.match_algorithm import SkillHave, SkillReq, compute_matc
 
 from .db import get_cursor
 from .schemas import GraphEdge, GraphNode, GraphResponse
+from .neo4j_db import get_session
+
+
+def get_job_graph_neo4j(job_ref: str, include_related: bool = True) -> GraphResponse:
+    query = """
+    MATCH (j:Job {pg_id: $job_ref})
+    OPTIONAL MATCH p=(j)-[r:REQUIRES]->(s:Skill)
+    OPTIONAL MATCH (s)-[r2:BELONGS_TO|USED_IN|PREREQUISITE_OF]-(related)
+    WITH j, collect(DISTINCT r) + collect(DISTINCT r2) AS rels
+    UNWIND rels AS rel
+    WITH j, rel, startNode(rel) AS a, endNode(rel) AS b
+    RETURN collect(DISTINCT j) + collect(DISTINCT a) + collect(DISTINCT b) AS nodes,
+           collect(DISTINCT rel) AS relationships
+    """
+    with get_session() as session:
+        record = session.run(query, job_ref=job_ref).single()
+    if not record:
+        return GraphResponse(nodes=[], edges=[])
+    nodes = {}
+    for node in record["nodes"]:
+        if node is None:
+            continue
+        labels = list(node.labels)
+        typ = labels[0].upper() if labels else "ENTITY"
+        props = dict(node)
+        node_id = str(props.pop("pg_id"))
+        nodes[node_id] = GraphNode(id=node_id, type=typ, label=props.get("name", node_id), properties=props)
+    edges = []
+    for rel in record["relationships"]:
+        if rel is None:
+            continue
+        edges.append(GraphEdge(id=str(rel.get("pg_id", rel.id)), source=str(rel.start_node["pg_id"]),
+                               target=str(rel.end_node["pg_id"]), type=rel.type,
+                               label=rel.type, properties=dict(rel)))
+    return GraphResponse(nodes=list(nodes.values()), edges=edges)
 
 
 def _node_from_row(row: dict) -> GraphNode:

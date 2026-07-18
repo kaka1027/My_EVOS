@@ -9,10 +9,13 @@ from .repositories import (
     compute_job_candidate_match,
     get_graph,
     get_job_graph,
+    get_job_graph_neo4j,
     list_candidates,
     list_jobs,
 )
 from .schemas import CandidateSummary, GraphResponse, JobSummary, MatchResponse
+from .neo4j_db import verify_connection
+from .projection import sync_projection
 
 app = FastAPI(title="EVOS Backend API", version="0.1.0")
 
@@ -30,7 +33,16 @@ def health() -> dict:
     with get_cursor() as cur:
         cur.execute("SELECT 1 AS ok")
         row = cur.fetchone()
-    return {"status": "ok", "database": bool(row and row["ok"] == 1)}
+    return {"status": "ok", "postgresql": bool(row and row["ok"] == 1), "neo4j": verify_connection()}
+
+
+@app.post("/api/admin/graph/sync")
+def api_graph_sync() -> dict[str, object]:
+    try:
+        counts = sync_projection()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"graph sync failed: {exc}") from exc
+    return {"status": "ok", **counts}
 
 
 @app.get("/api/jobs", response_model=list[JobSummary])
@@ -57,7 +69,10 @@ def api_job_graph(
     job_ref: str,
     include_related: bool = Query(default=True),
 ) -> GraphResponse:
-    graph = get_job_graph(job_ref, include_related=include_related)
+    try:
+        graph = get_job_graph_neo4j(job_ref, include_related=include_related)
+    except Exception:
+        graph = get_job_graph(job_ref, include_related=include_related)
     if not graph.nodes:
         raise HTTPException(status_code=404, detail="job not found")
     return graph
